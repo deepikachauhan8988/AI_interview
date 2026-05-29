@@ -378,6 +378,273 @@
     margin-right: 8px;
 }
 
+/* --- Modal Styles --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(3px);
+}
+
+.modal-content {
+    background: #ffffff;
+    width: 90%;
+    max-width: 600px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.3s ease-out;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+/* Mode Selector */
+.mode-selector {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    background: #f1f5f9;
+    padding: 0.25rem;
+    border-radius: 8px;
+}
+
+.mode-btn {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.mode-btn.active {
+    background: #ffffff;
+    color: #4f46e5;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Question & Answer */
+.question-display {
+    background: #f8fafc;
+    border-left: 4px solid #4f46e5;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+}
+
+.question-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.question-category {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #4f46e5;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.question-display strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #4f46e5;
+}
+
+.question-display p {
+    margin: 0;
+    color: #1e293b;
+    line-height: 1.6;
+}
+
+.answer-area {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.answer-area textarea {
+    width: 100%;
+    height: 120px;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    resize: none;
+    font-family: inherit;
+}
+
+.answer-area textarea:focus {
+    border-color: #4f46e5;
+    outline: none;
+}
+
+/* Voice Controls */
+.voice-controls {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mic-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: #4f46e5;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+.mic-btn.recording {
+    background: #ef4444;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+.recording-indicator {
+    font-size: 0.85rem;
+    color: #ef4444;
+    font-weight: 600;
+}
+
+/* Feedback */
+.feedback-box {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    animation: fadeIn 0.3s;
+    border-left: 4px solid;
+}
+
+.feedback-box.success {
+    background-color: #ecfdf5;
+    border-color: #10b981;
+    color: #065f46;
+}
+
+.feedback-box.error {
+    background-color: #fef2f2;
+    border-color: #ef4444;
+    color: #991b1b;
+}
+
+.feedback-header {
+    margin-bottom: 0.5rem;
+}
+
+.feedback-header strong {
+    font-size: 1.05rem;
+    display: block;
+}
+
+.feedback-message {
+    margin: 0.5rem 0;
+    font-weight: 500;
+}
+
+.feedback-details {
+    margin: 0.75rem 0 0 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+    padding-top: 0.5rem;
+    border-top: 1px solid currentColor;
+    opacity: 0.8;
+}
+
+.submit-modal-btn {
+    width: 100%;
+    padding: 1rem;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.submit-modal-btn:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
 .dashboard-main {
     flex: 1;
     padding: 30px;
@@ -750,11 +1017,11 @@
     border-radius: 50%;
 }
 
-input:checked + .toggle-slider {
+input:checked+.toggle-slider {
     background-color: var(--primary-color);
 }
 
-input:checked + .toggle-slider:before {
+input:checked+.toggle-slider:before {
     transform: translateX(20px);
 }
 
@@ -763,11 +1030,11 @@ input:checked + .toggle-slider:before {
     .top-header {
         display: flex;
     }
-    
+
     .dashboard-container {
         flex-direction: column;
     }
-    
+
     .dashboard-sidebar {
         width: 280px;
         height: calc(100vh - 70px);
@@ -784,7 +1051,7 @@ input:checked + .toggle-slider:before {
         transform: translateX(-100%);
         transition: transform 0.3s ease;
     }
-    
+
     .sidebar-header {
         padding: 20px;
         width: 100%;
@@ -793,32 +1060,32 @@ input:checked + .toggle-slider:before {
         align-items: center;
         border-bottom: 1px solid var(--border-color);
     }
-    
+
     .sidebar-close-btn {
         display: flex;
     }
-    
+
     .sidebar-logo h2 {
         font-size: 1.3rem;
     }
-    
+
     .sidebar-nav {
         flex: 1;
         display: block;
     }
-    
+
     .sidebar-footer {
         display: block;
         padding: 20px;
         border-top: 1px solid var(--border-color);
     }
-    
+
     .dashboard-main {
         flex: 1;
         padding: 30px;
         margin-top: 0;
     }
-    
+
     .dashboard-header h1 {
         font-size: 2rem;
     }
@@ -829,19 +1096,19 @@ input:checked + .toggle-slider:before {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 16px;
     }
-    
+
     .stat-card {
         padding: 20px;
     }
-    
+
     .stat-value {
         font-size: 1.8rem;
     }
-    
+
     .section-title {
         font-size: 1.3rem;
     }
-    
+
     .dashboard-header h1 {
         font-size: 1.6rem;
     }
@@ -851,37 +1118,37 @@ input:checked + .toggle-slider:before {
     .top-header {
         padding: 0 20px;
     }
-    
+
     .header-nav {
         gap: 4px;
     }
-    
+
     .nav-item {
         padding: 8px 12px;
         font-size: 0.85rem;
     }
-    
+
     .header-user-info h3 {
         font-size: 0.9rem;
     }
-    
+
     .dashboard-stats {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 16px;
     }
-    
+
     .stat-card {
         padding: 20px;
     }
-    
+
     .stat-value {
         font-size: 1.8rem;
     }
-    
+
     .section-title {
         font-size: 1.3rem;
     }
-    
+
     .dashboard-header h1 {
         font-size: 1.6rem;
     }
@@ -891,44 +1158,44 @@ input:checked + .toggle-slider:before {
     .top-header {
         padding: 0 15px;
     }
-    
+
     .header-left {
         gap: 15px;
     }
-    
+
     .header-logo h2 {
         font-size: 1.1rem;
     }
-    
+
     .header-nav {
         gap: 2px;
     }
-    
+
     .nav-item span:last-child {
         display: none;
     }
-    
+
     .nav-item {
         padding: 8px 10px;
         font-size: 0.8rem;
     }
-    
+
     .dashboard-main {
         padding: 15px;
     }
-    
+
     .dashboard-header h1 {
         font-size: 1.4rem;
     }
-    
+
     .section-title {
         font-size: 1.2rem;
     }
-    
+
     .stat-card {
         padding: 16px;
     }
-    
+
     .stat-value {
         font-size: 1.6rem;
     }

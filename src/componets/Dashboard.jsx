@@ -1,29 +1,89 @@
-import React, { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import '../assets/css/style.css'
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
+import '../assets/css/style.css';
 
 function Dashboard() {
-  const { user, logout } = useAuth()
+  const { user, logout } = useAuth();
+  
+  // --- Dashboard States ---
   const [stats, setStats] = useState({
     questionsPracticed: 0,
     accuracy: 0,
     dailyStreak: 0,
     weeklyGoal: 0
-  })
-  const [recentSessions, setRecentSessions] = useState([])
-  const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('overview')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  });
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // --- Modal States ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalCategory, setModalCategory] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  
+  // --- Interview Interaction States ---
+  const [inputMode, setInputMode] = useState('text'); // 'text' or 'voice'
+  const [userAnswer, setUserAnswer] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState(null); // { status, score, message }
+  const [recognition, setRecognition] = useState(null);
+
+  // --- Speech Recognition Setup ---
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = true; // Keep listening
+      recognitionInstance.interimResults = true; // Show text as you speak
+      recognitionInstance.lang = 'en-US';
+
+      recognitionInstance.onstart = () => {
+        setIsRecording(true);
+      };
+
+      recognitionInstance.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognitionInstance.onresult = (event) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        // Append final transcript to existing answer
+        if (finalTranscript) {
+          setUserAnswer(prev => prev + (prev ? ' ' : '') + finalTranscript);
+        }
+        // You could display interimTranscript in a separate span if desired
+      };
+
+      setRecognition(recognitionInstance);
+    } else {
+      console.warn("Speech Recognition not supported in this browser.");
+    }
+  }, []);
+
+  // --- Fetch Dashboard Data ---
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const categoriesResponse = await fetch('http://127.0.0.1:8000/management/question/categories/')
-        const categoriesData = await categoriesResponse.json()
+        const categoriesResponse = await fetch('http://127.0.0.1:8000/management/question/categories/');
+        const categoriesData = await categoriesResponse.json();
         
         if (categoriesData.status) {
-          const icons = ['📊', '🔍', '⚙️', '💾', '🏗️', '🌐']
+          const icons = ['📊', '🔍', '⚙️', '💾', '🏗️', '🌐'];
           setCategories(
             categoriesData.data.map((name, index) => ({
               id: index + 1,
@@ -31,7 +91,7 @@ function Dashboard() {
               progress: Math.floor(Math.random() * 50) + 30,
               icon: icons[index % icons.length]
             }))
-          )
+          );
         }
         
         setStats({
@@ -39,32 +99,180 @@ function Dashboard() {
           accuracy: 87,
           dailyStreak: 5,
           weeklyGoal: 75
-        })
+        });
         
         setRecentSessions([
           { id: 1, topic: 'Data Structures', score: 92, date: 'Today, 10:30 AM' },
           { id: 2, topic: 'System Design', score: 78, date: 'Yesterday, 3:15 PM' },
           { id: 3, topic: 'Algorithms', score: 85, date: 'May 27, 9:00 AM' },
           { id: 4, topic: 'Database', score: 91, date: 'May 26, 2:45 PM' }
-        ])
+        ]);
         
-        setLoading(false)
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error)
-        setLoading(false)
+        console.error('Error fetching dashboard data:', error);
+        setLoading(false);
       }
     }
 
-    fetchDashboardData()
-  }, [])
+    fetchDashboardData();
+  }, []);
+
+  // --- Modal Functions ---
+
+  const openModal = async (categoryName = null) => {
+    setIsModalOpen(true);
+    setModalCategory(categoryName);
+    setModalLoading(true);
+    setCurrentQuestion(null);
+    setUserAnswer('');
+    setFeedback(null);
+    setInputMode('text'); // Reset to text mode on open
+
+    try {
+      // API Call: Random Question from category
+      const queryParams = categoryName 
+        ? `?category=${encodeURIComponent(categoryName)}` 
+        : '';
+      
+      const response = await fetch(`http://127.0.0.1:8000/management/question/random/${queryParams}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      
+      if (data.status && data.data) {
+        setCurrentQuestion({
+          id: data.data.id,
+          category: data.data.category,
+          question: data.data.question
+        });
+      } else {
+        console.error("Failed to fetch question:", data.message);
+        // Fallback for demo if API fails
+        setCurrentQuestion({
+          id: 99,
+          category: categoryName || "General",
+          question: "What is the Virtual DOM in React?"
+        });
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      // Fallback for demo if API fails
+      setCurrentQuestion({
+        id: 99,
+        category: categoryName || "General",
+        question: "What is the Virtual DOM in React?"
+      });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    if (isRecording && recognition) {
+      recognition.stop();
+    }
+    setIsModalOpen(false);
+    setUserAnswer('');
+    setFeedback(null);
+    setQuestionsAnswered(0);
+  };
+
+  const handleNextQuestion = async () => {
+    setModalLoading(true);
+    setUserAnswer('');
+    setFeedback(null);
+    setInputMode('text');
+
+    try {
+      const queryParams = modalCategory 
+        ? `?category=${encodeURIComponent(modalCategory)}` 
+        : '';
+      
+      const response = await fetch(`http://127.0.0.1:8000/management/question/random/${queryParams}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const data = await response.json();
+      
+      if (data.status && data.data) {
+        setCurrentQuestion({
+          id: data.data.id,
+          category: data.data.category,
+          question: data.data.question
+        });
+        setQuestionsAnswered(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error("API Error fetching next question:", error);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const toggleRecording = () => {
+    if (!recognition) {
+      alert("Voice input is not supported in this browser (Use Chrome/Edge).");
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+    } else {
+      recognition.start();
+    }
+  };
+
+  const handleSubmitAnswer = async () => {
+    if (!currentQuestion || !userAnswer.trim()) return;
+
+    setIsSubmitting(true);
+    setFeedback(null);
+
+    try {
+      // API Call: Check Answer
+      const response = await fetch('http://127.0.0.1:8000/management/question/check-answer/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: currentQuestion.id,
+          answer: userAnswer
+        })
+      });
+
+      const result = await response.json();
+      
+      // Handle API response: { status: true/false, message: "...", details: "..." }
+      const isCorrect = result.status === true;
+      
+      setFeedback({
+        success: isCorrect,
+        message: result.message || (isCorrect ? "Great job!" : "Try again!"),
+        details: result.details || ""
+      });
+
+    } catch (error) {
+      console.error("Check Answer Error:", error);
+      setFeedback({
+        success: false,
+        message: "Error checking answer. Please try again.",
+        details: error.message
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleLogout = () => {
-    logout()
-  }
+    logout();
+  };
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen)
-  }
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   if (loading) {
     return (
@@ -80,7 +288,7 @@ function Dashboard() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -218,12 +426,17 @@ function Dashboard() {
 
         {activeTab === 'overview' && (
           <>
-            {/* Categories - Moved to top as requested */}
+            {/* Categories - Clickable to open modal */}
             <section className="dashboard-section">
               <h2 className="section-title">Skill Categories</h2>
               <div className="categories-container">
                 {categories.map(category => (
-                  <div key={category.id} className="category-card">
+                  <div 
+                    key={category.id} 
+                    className="category-card"
+                    onClick={() => openModal(category.name)} // Open Modal here
+                    style={{ cursor: 'pointer' }}
+                  >
                     <div className="category-header">
                       <span className="category-icon">{category.icon}</span>
                       <span className="category-name">{category.name}</span>
@@ -325,7 +538,7 @@ function Dashboard() {
               <div className="practice-card">
                 <h3>Ready to practice?</h3>
                 <p>Start your interview preparation session with AI-powered feedback</p>
-                <button className="practice-btn">
+                <button className="practice-btn" onClick={() => openModal()}>
                   <span>▶️</span>
                   <span>Start Practice Session</span>
                 </button>
@@ -388,8 +601,120 @@ function Dashboard() {
           </div>
         )}
       </main>
+
+      {/* --- INTERVIEW MODAL --- */}
+      {isModalOpen && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{modalCategory ? `${modalCategory} Practice` : 'Random Practice'}</h3>
+              <button className="modal-close-btn" onClick={closeModal}>✕</button>
+            </div>
+
+            {modalLoading ? (
+              <div className="modal-body text-center">
+                <div className="spinner"></div>
+                <p>Loading question...</p>
+              </div>
+            ) : (
+              <div className="modal-body">
+                {/* Mode Selection */}
+                <div className="mode-selector">
+                  <button 
+                    className={`mode-btn ${inputMode === 'text' ? 'active' : ''}`}
+                    onClick={() => setInputMode('text')}
+                  >
+                    ⌨️ Text Answer
+                  </button>
+                  <button 
+                    className={`mode-btn ${inputMode === 'voice' ? 'active' : ''}`}
+                    onClick={() => setInputMode('voice')}
+                  >
+                    🎤 Voice Speak
+                  </button>
+                </div>
+
+                {/* Question Display */}
+                {currentQuestion && (
+                  <div className="question-display">
+                    <div className="question-meta">
+                      {currentQuestion.category && (
+                        <span className="question-category">📁 {currentQuestion.category}</span>
+                      )}
+                    </div>
+                    <strong>Question:</strong>
+                    <p>{currentQuestion.question}</p>
+                  </div>
+                )}
+
+                {/* Answer Input Area */}
+                <div className="answer-area">
+                  <textarea
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    placeholder={
+                      inputMode === 'voice' 
+                        ? "Click microphone and speak..." 
+                        : "Type your answer here..."
+                    }
+                    disabled={isSubmitting}
+                  ></textarea>
+
+                  {/* Voice Controls (Only visible in Voice Mode) */}
+                  {inputMode === 'voice' && (
+                    <div className="voice-controls">
+                      <button 
+                        className={`mic-btn ${isRecording ? 'recording' : ''}`}
+                        onClick={toggleRecording}
+                        disabled={isSubmitting}
+                      >
+                        {isRecording ? '⏹' : '🎤'}
+                      </button>
+                      {isRecording && <span className="recording-indicator">Listening...</span>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Feedback / Result */}
+                {feedback && (
+                  <div className={`feedback-box ${feedback.success ? 'success' : 'error'}`}>
+                    <div className="feedback-header">
+                      <strong>
+                        {feedback.success ? '✓ Correct!' : '✗ Incorrect'}
+                      </strong>
+                    </div>
+                    <p className="feedback-message">{feedback.message}</p>
+                    {feedback.details && (
+                      <p className="feedback-details">{feedback.details}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Submit/Next Button Area */}
+                {!feedback ? (
+                  <button 
+                    className="submit-modal-btn"
+                    onClick={handleSubmitAnswer}
+                    disabled={!userAnswer.trim() || isSubmitting}
+                  >
+                    {isSubmitting ? 'Checking...' : 'Submit Answer'}
+                  </button>
+                ) : (
+                  <button 
+                    className="submit-modal-btn next-btn"
+                    onClick={handleNextQuestion}
+                    disabled={modalLoading}
+                  >
+                    {modalLoading ? 'Loading next...' : '→ Next Question'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }
 
-export default Dashboard
+export default Dashboard;
