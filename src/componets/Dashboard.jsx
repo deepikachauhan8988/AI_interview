@@ -17,37 +17,38 @@ function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   useEffect(() => {
-    // Fetch dashboard data
     const fetchDashboardData = async () => {
       try {
-        // In a real app, these would be API calls
-        // For now, we'll simulate with mock data
-        setTimeout(() => {
-          setStats({
-            questionsPracticed: 127,
-            accuracy: 87,
-            dailyStreak: 5,
-            weeklyGoal: 75
-          })
-          
-          setRecentSessions([
-            { id: 1, topic: 'Data Structures', score: 92, date: 'Today, 10:30 AM' },
-            { id: 2, topic: 'System Design', score: 78, date: 'Yesterday, 3:15 PM' },
-            { id: 3, topic: 'Algorithms', score: 85, date: 'May 27, 9:00 AM' },
-            { id: 4, topic: 'Database', score: 91, date: 'May 26, 2:45 PM' }
-          ])
-          
-          setCategories([
-            { id: 1, name: 'Data Structures', progress: 75, icon: '📊' },
-            { id: 2, name: 'Algorithms', progress: 60, icon: '🔍' },
-            { id: 3, name: 'System Design', progress: 45, icon: '⚙️' },
-            { id: 4, name: 'Database', progress: 80, icon: '💾' },
-            { id: 5, name: 'Object-Oriented', progress: 55, icon: '🏗️' },
-            { id: 6, name: 'Networking', progress: 30, icon: '🌐' }
-          ])
-          
-          setLoading(false)
-        }, 1000)
+        const categoriesResponse = await fetch('http://127.0.0.1:8000/management/question/categories/')
+        const categoriesData = await categoriesResponse.json()
+        
+        if (categoriesData.status) {
+          const icons = ['📊', '🔍', '⚙️', '💾', '🏗️', '🌐']
+          setCategories(
+            categoriesData.data.map((name, index) => ({
+              id: index + 1,
+              name: name,
+              progress: Math.floor(Math.random() * 50) + 30,
+              icon: icons[index % icons.length]
+            }))
+          )
+        }
+        
+        setStats({
+          questionsPracticed: 127,
+          accuracy: 87,
+          dailyStreak: 5,
+          weeklyGoal: 75
+        })
+        
+        setRecentSessions([
+          { id: 1, topic: 'Data Structures', score: 92, date: 'Today, 10:30 AM' },
+          { id: 2, topic: 'System Design', score: 78, date: 'Yesterday, 3:15 PM' },
+          { id: 3, topic: 'Algorithms', score: 85, date: 'May 27, 9:00 AM' },
+          { id: 4, topic: 'Database', score: 91, date: 'May 26, 2:45 PM' }
+        ])
+        
+        setLoading(false)
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
         setLoading(false)
