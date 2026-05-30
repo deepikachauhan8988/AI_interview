@@ -24,6 +24,8 @@ function Dashboard() {
   const [modalLoading, setModalLoading] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  const [allQuestions, setAllQuestions] = useState([]);
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
   
   // --- Interview Interaction States ---
   const [inputMode, setInputMode] = useState('text'); // 'text' or 'voice'
@@ -120,54 +122,68 @@ function Dashboard() {
 
   // --- Modal Functions ---
 
-  const openModal = async (categoryName = null) => {
-    setIsModalOpen(true);
-    setModalCategory(categoryName);
-    setModalLoading(true);
-    setCurrentQuestion(null);
+   const openModal = async (categoryName = null) => {
+     setIsModalOpen(true);
+     setModalCategory(categoryName);
+     setModalLoading(true);
+     setCurrentQuestion(null);
+     setUserAnswer('');
+     setFeedback(null);
+     setInputMode('text'); // Reset to text mode on open
+     setSelectedQuestionIndex(0);
+
+     try {
+       // API Call: Fetch ALL questions from category
+       const response = await fetch(`http://127.0.0.1:8000/management/question/category/${encodeURIComponent(categoryName || '')}/`, {
+         method: 'GET',
+         headers: { 'Content-Type': 'application/json' }
+       });
+       
+       const data = await response.json();
+       
+       if (data.status && data.data && data.data.length > 0) {
+         setAllQuestions(data.data);
+         setCurrentQuestion({
+           id: data.data[0].id,
+           category: data.data[0].category,
+           question: data.data[0].question
+         });
+       } else {
+         console.error("Failed to fetch questions:", data.message);
+         // Fallback for demo if API fails
+         const demoQuestions = [
+           { id: 99, category: categoryName || "General", question: "What is the Virtual DOM in React?" },
+           { id: 100, category: categoryName || "General", question: "Explain the difference between let, const, and var in JavaScript." },
+           { id: 101, category: categoryName || "General", question: "What are React hooks and why are they useful?" }
+         ];
+         setAllQuestions(demoQuestions);
+         setCurrentQuestion(demoQuestions[0]);
+       }
+     } catch (error) {
+       console.error("API Error:", error);
+       // Fallback for demo if API fails
+       const demoQuestions = [
+         { id: 99, category: categoryName || "General", question: "What is the Virtual DOM in React?" },
+         { id: 100, category: categoryName || "General", question: "Explain the difference between let, const, and var in JavaScript." },
+         { id: 101, category: categoryName || "General", question: "What are React hooks and why are they useful?" }
+       ];
+       setAllQuestions(demoQuestions);
+       setCurrentQuestion(demoQuestions[0]);
+     } finally {
+       setModalLoading(false);
+     }
+   };
+
+  const handleSelectQuestion = (index) => {
+    setSelectedQuestionIndex(index);
+    setCurrentQuestion({
+      id: allQuestions[index].id,
+      category: allQuestions[index].category,
+      question: allQuestions[index].question
+    });
     setUserAnswer('');
     setFeedback(null);
-    setInputMode('text'); // Reset to text mode on open
-
-    try {
-      // API Call: Random Question from category
-      const queryParams = categoryName 
-        ? `?category=${encodeURIComponent(categoryName)}` 
-        : '';
-      
-      const response = await fetch(`http://127.0.0.1:8000/management/question/random/${queryParams}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      const data = await response.json();
-      
-      if (data.status && data.data) {
-        setCurrentQuestion({
-          id: data.data.id,
-          category: data.data.category,
-          question: data.data.question
-        });
-      } else {
-        console.error("Failed to fetch question:", data.message);
-        // Fallback for demo if API fails
-        setCurrentQuestion({
-          id: 99,
-          category: categoryName || "General",
-          question: "What is the Virtual DOM in React?"
-        });
-      }
-    } catch (error) {
-      console.error("API Error:", error);
-      // Fallback for demo if API fails
-      setCurrentQuestion({
-        id: 99,
-        category: categoryName || "General",
-        question: "What is the Virtual DOM in React?"
-      });
-    } finally {
-      setModalLoading(false);
-    }
+    setInputMode('text');
   };
 
   const closeModal = () => {
@@ -178,40 +194,57 @@ function Dashboard() {
     setUserAnswer('');
     setFeedback(null);
     setQuestionsAnswered(0);
+    setAllQuestions([]);
+    setSelectedQuestionIndex(0);
   };
 
-  const handleNextQuestion = async () => {
-    setModalLoading(true);
-    setUserAnswer('');
-    setFeedback(null);
-    setInputMode('text');
+   const handleNextQuestion = async () => {
+     setModalLoading(true);
+     setUserAnswer('');
+     setFeedback(null);
+     setInputMode('text');
 
-    try {
-      const queryParams = modalCategory 
-        ? `?category=${encodeURIComponent(modalCategory)}` 
-        : '';
-      
-      const response = await fetch(`http://127.0.0.1:8000/management/question/random/${queryParams}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      const data = await response.json();
-      
-      if (data.status && data.data) {
-        setCurrentQuestion({
-          id: data.data.id,
-          category: data.data.category,
-          question: data.data.question
-        });
-        setQuestionsAnswered(prev => prev + 1);
-      }
-    } catch (error) {
-      console.error("API Error fetching next question:", error);
-    } finally {
-      setModalLoading(false);
-    }
-  };
+     try {
+       const queryParams = modalCategory 
+         ? `?category=${encodeURIComponent(modalCategory)}` 
+         : '';
+       
+       const response = await fetch(`http://127.0.0.1:8000/management/question/random/${queryParams}`, {
+         method: 'GET',
+         headers: { 'Content-Type': 'application/json' }
+       });
+       
+       const data = await response.json();
+       
+       if (data.status && data.data) {
+         const newQuestion = data.data;
+         
+         // Check if this question already exists in allQuestions
+         const existingIndex = allQuestions.findIndex(q => q.id === newQuestion.id);
+         
+         if (existingIndex !== -1) {
+           // Question already exists, select it
+           setSelectedQuestionIndex(existingIndex);
+         } else {
+           // Question is new, add it to the end and select it
+           setAllQuestions(prev => [...prev, newQuestion]);
+           setSelectedQuestionIndex(prev => prev.length); // New index at end
+         }
+         
+         setCurrentQuestion({
+           id: newQuestion.id,
+           category: newQuestion.category,
+           question: newQuestion.question
+         });
+         
+         setQuestionsAnswered(prev => prev + 1);
+       }
+     } catch (error) {
+       console.error("API Error fetching next question:", error);
+     } finally {
+       setModalLoading(false);
+     }
+   };
 
   const toggleRecording = () => {
     if (!recognition) {
@@ -633,6 +666,25 @@ function Dashboard() {
                     🎤 Voice Speak
                   </button>
                 </div>
+
+                {/* Question Selector */}
+                {allQuestions.length > 0 && (
+                  <div className="question-selector">
+                    <label htmlFor="question-select">Select a Question:</label>
+                    <select
+                      id="question-select"
+                      className="question-select-dropdown"
+                      value={selectedQuestionIndex}
+                      onChange={(e) => handleSelectQuestion(parseInt(e.target.value))}
+                    >
+                      {allQuestions.map((q, index) => (
+                        <option key={q.id} value={index}>
+                          Question {index + 1}: {q.question.substring(0, 50)}...
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Question Display */}
                 {currentQuestion && (
